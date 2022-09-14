@@ -1,47 +1,73 @@
+import React, { useEffect, useState } from "react";
 import Card from "./components/Card";
 import Header from "./components/Header";
 import Drawer from "./components/Drawer";
 
-const arr = [
-  {
-    name: "Мужские Кроссовки Nike Blazer Mid Suede",
-    price: 12999,
-    url: "/img/sneakers/1.jpg",
-  },
-  {
-    name: "Мужские Кроссовки Nike Air Max 270",
-    price: 12999,
-    url: "/img/sneakers/2.jpg",
-  },
-  {
-    name: "Мужские Кроссовки Nike Blazer Mid Suede",
-    price: 8499,
-    url: "/img/sneakers/3.jpg",
-  },
-  {
-    name: "Кроссовки Puma X Aka Boku Future Rider",
-    price: 8999,
-    url: "/img/sneakers/4.jpg",
-  },
-];
-
 function App() {
+  const [items, setItems] = useState([]);
+  const [cartItems, setCartItems] = useState([]);
+  const [serchValue, setSerchValue] = useState("");
+  const [cartOpened, setCartOpened] = useState(false);
+
+  useEffect(() => {
+    fetch("https://631ffc669f82827dcf2271b0.mockapi.io/items")
+      .then((res) => {
+        return res.json();
+      })
+      .then((json) => setItems(json));
+  }, []);
+
+  const onAddToCart = (obj) => {
+    setCartItems((prev) => [...prev, obj]);
+  };
+
+  const onChangeSearchInput = (event) => {
+    setSerchValue(event.target.value);
+  };
+
   return (
     <div className="wrapper clear">
-      <Drawer />
-      <Header />
+      {cartOpened && (
+        <Drawer items={cartItems} onClose={() => setCartOpened(false)} />
+      )}
+      <Header onClickCart={() => setCartOpened(true)} />
       <div className="content p-40">
         <div className="d-flex align-center mb-40 justify-between">
-          <h1 className="">Все кроссовки</h1>
+          <h1 className="">
+            {serchValue ? `Поиск по запросу: "${serchValue}"` : "Все кроссовки"}
+          </h1>
           <div className="search-block d-flex">
             <img src="/img/searchicon.svg" alt="serch icon" />
-            <input placeholder="Поиск..." />
+            {serchValue && (
+              <img
+                onClick={() => setSerchValue("")}
+                className="clear removeBtn cu-p"
+                src="/img/btn-remove.svg"
+                alt="Remove"
+              />
+            )}
+            <input
+              onChange={onChangeSearchInput}
+              value={serchValue}
+              placeholder="Поиск..."
+            />
           </div>
         </div>
-        <div className="d-flex justify-between">
-          {arr.map((obj) => (
-            <Card name={obj.name} url={obj.url} price={obj.price} />
-          ))}
+        <div className="d-flex flex-wrap mb-30 justify-between">
+          {items
+            .filter((item) =>
+              item.name.toLowerCase().includes(serchValue.toLowerCase())
+            )
+            .map((item, index) => (
+              <Card
+                key={index}
+                name={item.name}
+                url={item.url}
+                price={item.price}
+                onPlus={(obj) => onAddToCart(obj)}
+                onFavorite={() => console.log("Нажали избранное")}
+              />
+            ))}
         </div>
       </div>
     </div>
