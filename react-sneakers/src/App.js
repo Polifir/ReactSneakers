@@ -1,24 +1,60 @@
 import React, { useEffect, useState } from "react";
-import Card from "./components/Card";
+import { Routes, Route, Link } from "react-router-dom";
+import axios from "axios";
+
 import Header from "./components/Header";
 import Drawer from "./components/Drawer";
+
+import Home from "./pages/Home";
+import Favorites from "./pages/Favorites";
+
+// import { Route } from "react-router-dom";
 
 function App() {
   const [items, setItems] = useState([]);
   const [cartItems, setCartItems] = useState([]);
+  const [favorites, setFavorites] = useState([]);
   const [serchValue, setSerchValue] = useState("");
   const [cartOpened, setCartOpened] = useState(false);
 
   useEffect(() => {
-    fetch("https://631ffc669f82827dcf2271b0.mockapi.io/items")
+    axios
+      .get("https://631ffc669f82827dcf2271b0.mockapi.io/items")
       .then((res) => {
-        return res.json();
-      })
-      .then((json) => setItems(json));
+        setItems(res.data);
+      });
+    axios
+      .get("https://631ffc669f82827dcf2271b0.mockapi.io/cart")
+      .then((res) => {
+        setCartItems(res.data);
+      });
+    axios
+      .get("https://631ffc669f82827dcf2271b0.mockapi.io/favorite")
+      .then((res) => {
+        setFavorites(res.data);
+      });
   }, []);
 
   const onAddToCart = (obj) => {
+    axios.post("https://631ffc669f82827dcf2271b0.mockapi.io/cart", obj);
     setCartItems((prev) => [...prev, obj]);
+  };
+
+  const onRemoveItem = (id) => {
+    axios.delete(`https://631ffc669f82827dcf2271b0.mockapi.io/cart/${id}`);
+    setCartItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const onAddToFavorite = (obj) => {
+    if (favorites.find((item) => item.id === obj.id)) {
+      axios.delete(
+        `https://631ffc669f82827dcf2271b0.mockapi.io/favorite/${obj.id}`
+      );
+      setFavorites((prev) => prev.filter((item) => item.id !== obj.id));
+    } else {
+      axios.post("https://631ffc669f82827dcf2271b0.mockapi.io/favorite", obj);
+      setFavorites((prev) => [...prev, obj]);
+    }
   };
 
   const onChangeSearchInput = (event) => {
@@ -28,48 +64,34 @@ function App() {
   return (
     <div className="wrapper clear">
       {cartOpened && (
-        <Drawer items={cartItems} onClose={() => setCartOpened(false)} />
+        <Drawer
+          items={cartItems}
+          onClose={() => setCartOpened(false)}
+          onRemove={onRemoveItem}
+        />
       )}
       <Header onClickCart={() => setCartOpened(true)} />
-      <div className="content p-40">
-        <div className="d-flex align-center mb-40 justify-between">
-          <h1 className="">
-            {serchValue ? `Поиск по запросу: "${serchValue}"` : "Все кроссовки"}
-          </h1>
-          <div className="search-block d-flex">
-            <img src="/img/searchicon.svg" alt="serch icon" />
-            {serchValue && (
-              <img
-                onClick={() => setSerchValue("")}
-                className="clear removeBtn cu-p"
-                src="/img/btn-remove.svg"
-                alt="Remove"
-              />
-            )}
-            <input
-              onChange={onChangeSearchInput}
-              value={serchValue}
-              placeholder="Поиск..."
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <Home
+              items={items}
+              serchValue={serchValue}
+              setSerchValue={setSerchValue}
+              onChangeSearchInput={onChangeSearchInput}
+              onAddToFavorite={onAddToFavorite}
+              onAddToCart={onAddToCart}
             />
-          </div>
-        </div>
-        <div className="d-flex flex-wrap mb-30 justify-between">
-          {items
-            .filter((item) =>
-              item.name.toLowerCase().includes(serchValue.toLowerCase())
-            )
-            .map((item, index) => (
-              <Card
-                key={index}
-                name={item.name}
-                url={item.url}
-                price={item.price}
-                onPlus={(obj) => onAddToCart(obj)}
-                onFavorite={() => console.log("Нажали избранное")}
-              />
-            ))}
-        </div>
-      </div>
+          }
+        />
+        <Route
+          path="/favorites"
+          element={
+            <Favorites items={favorites} onAddToFavorite={onAddToFavorite} />
+          }
+        />
+      </Routes>
     </div>
   );
 }
